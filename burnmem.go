@@ -20,13 +20,10 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"math"
 	"os"
-	"path"
-	"strings"
 	"time"
 
 	"github.com/chaosblade-io/chaosblade-spec-go/channel"
@@ -45,33 +42,18 @@ const ErrPrefix = "Error:"
 type Block [32 * 1024]int32
 
 var (
-	burnMemStart, burnMemStop, burnMemNohup, includeBufferCache      bool
-	memPercent, memReserve, memRate                                  int
-	ExitMessageForTesting                                            string
+	includeBufferCache                bool
+	memPercent, memReserve, memRate   int
+	ExitMessageForTesting             string
 )
 
 func main() {
-	flag.BoolVar(&burnMemStart, "start", false, "start burn memory")
-	flag.BoolVar(&burnMemStop, "stop", false, "stop burn memory")
-	flag.BoolVar(&burnMemNohup, "nohup", false, "nohup to run burn memory")
 	flag.BoolVar(&includeBufferCache, "include-buffer-cache", false, "ram model mem-percent is exclude buffer/cache")
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
 	ParseFlagAndInitLog()
-
-	if burnMemStart {
-		startBurnMem()
-	} else if burnMemStop {
-		if success, errs := stopBurnMem(); !success {
-			PrintErrAndExit(errs)
-		}
-	} else if burnMemNohup {
-	    burnMemWithRam()
-	} else {
-		PrintAndExitWithErrPrefix("less --start or --stop flag")
-	}
-
+	burnMemWithRam()
 }
 
 var dirName = "burnmem_tmpfs"
@@ -93,7 +75,6 @@ func burnMemWithRam() {
 	for range tick {
 		_, expectMem, err := calculateMemSize(memPercent, memReserve)
 		if err != nil {
-			stopBurnMemFunc()
 			PrintErrAndExit(err.Error())
 		}
 		fillMem := expectMem
@@ -125,51 +106,6 @@ var burnMemBin = "chaos_burnmem"
 
 var cl = channel.NewLocalChannel()
 
-var stopBurnMemFunc = stopBurnMem
-
-var runBurnMemFunc = runBurnMem
-
-func startBurnMem() {
-	ctx := context.Background()
-	runBurnMemFunc(ctx, memPercent, memReserve, memRate, includeBufferCache)
-}
-
-func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, includeBufferCache bool) {
-	args := fmt.Sprintf(`%s --nohup --mem-percent %d --reserve %d --rate %d --mode %s --include-buffer-cache=%t`,
-		path.Join(util.GetProgramPath(), burnMemBin), memPercent, memReserve, memRate, includeBufferCache)
-	args = fmt.Sprintf(`%s > /dev/null 2>&1 &`, args)
-	response := cl.Run(ctx, "nohup", args)
-	if !response.Success {
-		stopBurnMemFunc()
-		PrintErrAndExit(response.Err)
-	}
-	// check pid
-	newCtx := context.WithValue(context.Background(), channel.ProcessKey, "--nohup")
-	pids, err := cl.GetPidsByProcessName(burnMemBin, newCtx)
-	if err != nil {
-		stopBurnMemFunc()
-		PrintErrAndExit(fmt.Sprintf("run burn memory failed, cannot get the burning program pid, %v",
-			err))
-	}
-	if len(pids) == 0 {
-		stopBurnMemFunc()
-		PrintErrAndExit(fmt.Sprintf("run burn memory failed, cannot find the burning program pid"))
-	}
-}
-
-func stopBurnMem() (success bool, errs string) {
-	ctx := context.WithValue(context.Background(), channel.ProcessKey, "nohup")
-	ctx = context.WithValue(ctx, channel.ExcludeProcessKey, "stop")
-	pids, _ := cl.GetPidsByProcessName(burnMemBin, ctx)
-	var response *spec.Response
-	if pids != nil && len(pids) != 0 {
-		response = cl.Run(ctx, "kill", fmt.Sprintf(`-9 %s`, strings.Join(pids, " ")))
-		if !response.Success {
-			return false, response.Err
-		}
-	}
-	return true, errs
-}
 
 func calculateMemSize(percent, reserve int) (int64, int64, error) {
 	total := int64(0)
