@@ -36,9 +36,6 @@ import (
 	"github.com/shirou/gopsutil/mem"
 
 	"github.com/sirupsen/logrus"
-
-	"github.com/chaosblade-io/chaosblade-exec-os/exec"
-	"github.com/chaosblade-io/chaosblade-exec-os/exec/bin"
 )
 
 const PageCounterMax uint64 = 9223372036854770000
@@ -48,6 +45,7 @@ const (
 	//oomMinScore        = "-1000"
 	processOOMAdj      = "/proc/%s/oom_adj"
 	oomMinAdj          = "-17"
+    ErrPrefix          = "Error:"
 )
 
 // 128K
@@ -56,7 +54,7 @@ type Block [32 * 1024]int32
 var (
 	burnMemStart, burnMemStop, burnMemNohup, includeBufferCache, avoidBeingKilled bool
 	memPercent, memReserve, memRate                                               int
-	burnMemMode                                                                   string
+	burnMemMode, ExitMessageForTesting                                            string
 )
 
 func main() {
@@ -69,13 +67,13 @@ func main() {
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
 	flag.StringVar(&burnMemMode, "mode", "cache", "burn memory mode, cache or ram")
-	bin.ParseFlagAndInitLog()
+	ParseFlagAndInitLog()
 
 	if burnMemStart {
 		startBurnMem()
 	} else if burnMemStop {
 		if success, errs := stopBurnMem(); !success {
-			bin.PrintErrAndExit(errs)
+			PrintErrAndExit(errs)
 		}
 	} else if burnMemNohup {
 		if burnMemMode == "cache" {
@@ -84,7 +82,7 @@ func main() {
 			burnMemWithRam()
 		}
 	} else {
-		bin.PrintAndExitWithErrPrefix("less --start or --stop flag")
+		PrintAndExitWithErrPrefix("less --start or --stop flag")
 	}
 
 }
@@ -94,6 +92,8 @@ var dirName = "burnmem_tmpfs"
 var fileName = "file"
 
 var fileCount = 1
+
+var ExitFunc = os.Exit
 
 func burnMemWithRam() {
 	tick := time.Tick(time.Second)
@@ -107,7 +107,7 @@ func burnMemWithRam() {
 		_, expectMem, err := calculateMemSize(memPercent, memReserve)
 		if err != nil {
 			stopBurnMemFunc()
-			bin.PrintErrAndExit(err.Error())
+			PrintErrAndExit(err.Error())
 		}
 		fillMem := expectMem
 		if expectMem > 0 {
@@ -141,7 +141,7 @@ func burnMemWithCache() {
 		_, expectMem, err := calculateMemSize(memPercent, memReserve)
 		if err != nil {
 			stopBurnMemFunc()
-			bin.PrintErrAndExit(err.Error())
+			PrintErrAndExit(err.Error())
 		}
 		fillMem := expectMem
 		if expectMem > 0 {
@@ -152,14 +152,14 @@ func burnMemWithCache() {
 			response := cl.Run(context.Background(), "dd", fmt.Sprintf("if=/dev/zero of=%s bs=1M count=%d", nFilePath, fillMem))
 			if !response.Success {
 				stopBurnMemFunc()
-				bin.PrintErrAndExit(response.Error())
+				PrintErrAndExit(response.Error())
 			}
 			fileCount++
 		}
 	}
 }
 
-var burnMemBin = exec.BurnMemBin
+var burnMemBin = "chaos_burnmem"
 
 var cl = channel.NewLocalChannel()
 
@@ -171,19 +171,19 @@ func startBurnMem() {
 	ctx := context.Background()
 	if burnMemMode == "cache" {
 		if !cl.IsCommandAvailable("mount") {
-			bin.PrintErrAndExit(spec.CommandMountNotFound.Msg)
+			PrintErrAndExit(spec.CommandMountNotFound.Msg)
 		}
 
 		flPath := path.Join(util.GetProgramPath(), dirName)
 		if _, err := os.Stat(flPath); err != nil {
 			err = os.Mkdir(flPath, os.ModePerm)
 			if err != nil {
-				bin.PrintErrAndExit(err.Error())
+				PrintErrAndExit(err.Error())
 			}
 		}
 		response := cl.Run(ctx, "mount", fmt.Sprintf("-t tmpfs tmpfs %s -o size=", flPath)+"100%")
 		if !response.Success {
-			bin.PrintErrAndExit(response.Error())
+			PrintErrAndExit(response.Error())
 		}
 	}
 	runBurnMemFunc(ctx, memPercent, memReserve, memRate, burnMemMode, includeBufferCache)
@@ -196,19 +196,19 @@ func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, burnMe
 	response := cl.Run(ctx, "nohup", args)
 	if !response.Success {
 		stopBurnMemFunc()
-		bin.PrintErrAndExit(response.Err)
+		PrintErrAndExit(response.Err)
 	}
 	// check pid
 	newCtx := context.WithValue(context.Background(), channel.ProcessKey, "--nohup")
 	pids, err := cl.GetPidsByProcessName(burnMemBin, newCtx)
 	if err != nil {
 		stopBurnMemFunc()
-		bin.PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot get the burning program pid, %v",
+		PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot get the burning program pid, %v",
 			burnMemMode, err))
 	}
 	if len(pids) == 0 {
 		stopBurnMemFunc()
-		bin.PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot find the burning program pid",
+		PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot find the burning program pid",
 			burnMemMode))
 	}
 	// adjust process oom_score_adj to avoid being killed
@@ -221,7 +221,7 @@ func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, burnMe
 
 			if err := ioutil.WriteFile(scoreAdjFile, []byte(oomMinAdj), 0644); err != nil {
 				stopBurnMemFunc()
-				bin.PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot edit the process oom_score_adj",
+				PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot edit the process oom_score_adj",
 					burnMemMode))
 			}
 		}
@@ -243,18 +243,18 @@ func stopBurnMem() (success bool, errs string) {
 		dirPath := path.Join(util.GetProgramPath(), dirName)
 		if _, err := os.Stat(dirPath); err == nil {
 			if !cl.IsCommandAvailable("umount") {
-				bin.PrintErrAndExit(spec.CommandUmountNotFound.Msg)
+				PrintErrAndExit(spec.CommandUmountNotFound.Msg)
 			}
 
 			response = cl.Run(ctx, "umount", dirPath)
 			if !response.Success {
 				if !strings.Contains(response.Err, "not mounted") {
-					bin.PrintErrAndExit(response.Error())
+					PrintErrAndExit(response.Error())
 				}
 			}
 			err = os.RemoveAll(dirPath)
 			if err != nil {
-				bin.PrintErrAndExit(err.Error())
+				PrintErrAndExit(err.Error())
 			}
 		}
 	}
@@ -285,4 +285,32 @@ func calculateMemSize(percent, reserve int) (int64, int64, error) {
 		available/1024/1024, percent, reserved, expectSize)
 
 	return total / 1024 / 1024, expectSize, nil
+}
+
+func PrintAndExitWithErrPrefix(message string) {
+	ExitMessageForTesting = fmt.Sprintf("%s %s", ErrPrefix, message)
+	fmt.Fprint(os.Stderr, fmt.Sprintf("%s %s", ErrPrefix, message))
+	ExitFunc(1)
+}
+
+func PrintErrAndExit(message string) {
+	ExitMessageForTesting = message
+	fmt.Fprint(os.Stderr, message)
+	ExitFunc(1)
+}
+
+func PrintErrRespAndExit(response *spec.Response) {
+	PrintErrAndExit(response.Print())
+}
+
+func PrintOutputAndExit(message string) {
+	ExitMessageForTesting = message
+	fmt.Fprintf(os.Stdout, message)
+	ExitFunc(0)
+}
+
+func ParseFlagAndInitLog() {
+	util.AddDebugFlag()
+	flag.Parse()
+	util.InitLog(util.Bin)
 }
