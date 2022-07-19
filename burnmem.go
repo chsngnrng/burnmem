@@ -39,13 +39,7 @@ import (
 
 const PageCounterMax uint64 = 9223372036854770000
 
-const (
-	//processOOMScoreAdj = "/proc/%s/oom_score_adj"
-	//oomMinScore        = "-1000"
-	processOOMAdj      = "/proc/%s/oom_adj"
-	oomMinAdj          = "-17"
-    ErrPrefix          = "Error:"
-)
+const ErrPrefix = "Error:"
 
 // 128K
 type Block [32 * 1024]int32
