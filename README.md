@@ -1,7 +1,8 @@
 This project is based on https://github.com/chaosblade-io/chaosblade-exec-os
 
 It's aim is to compile memory consumation tool from Chaostools for Windows.
-At this moment the only change is cgroups exclusion because it cannot be compiled for Windows.
+At this moment the changes include removing of features which do not exist in Windows
+(cgroups, oom adj, cache mode)
 Further on I hope to make it more neat and convenient to use
 
 Usage:
