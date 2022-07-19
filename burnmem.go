@@ -45,9 +45,9 @@ const ErrPrefix = "Error:"
 type Block [32 * 1024]int32
 
 var (
-	burnMemStart, burnMemStop, burnMemNohup, includeBufferCache                   bool
-	memPercent, memReserve, memRate                                               int
-	burnMemMode, ExitMessageForTesting                                            string
+	burnMemStart, burnMemStop, burnMemNohup, includeBufferCache      bool
+	memPercent, memReserve, memRate                                  int
+	ExitMessageForTesting                                            string
 )
 
 func main() {
@@ -131,12 +131,12 @@ var runBurnMemFunc = runBurnMem
 
 func startBurnMem() {
 	ctx := context.Background()
-	runBurnMemFunc(ctx, memPercent, memReserve, memRate, burnMemMode, includeBufferCache)
+	runBurnMemFunc(ctx, memPercent, memReserve, memRate, includeBufferCache)
 }
 
-func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, burnMemMode string, includeBufferCache bool) {
+func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, includeBufferCache bool) {
 	args := fmt.Sprintf(`%s --nohup --mem-percent %d --reserve %d --rate %d --mode %s --include-buffer-cache=%t`,
-		path.Join(util.GetProgramPath(), burnMemBin), memPercent, memReserve, memRate, burnMemMode, includeBufferCache)
+		path.Join(util.GetProgramPath(), burnMemBin), memPercent, memReserve, memRate, includeBufferCache)
 	args = fmt.Sprintf(`%s > /dev/null 2>&1 &`, args)
 	response := cl.Run(ctx, "nohup", args)
 	if !response.Success {
@@ -148,13 +148,12 @@ func runBurnMem(ctx context.Context, memPercent, memReserve, memRate int, burnMe
 	pids, err := cl.GetPidsByProcessName(burnMemBin, newCtx)
 	if err != nil {
 		stopBurnMemFunc()
-		PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot get the burning program pid, %v",
-			burnMemMode, err))
+		PrintErrAndExit(fmt.Sprintf("run burn memory failed, cannot get the burning program pid, %v",
+			err))
 	}
 	if len(pids) == 0 {
 		stopBurnMemFunc()
-		PrintErrAndExit(fmt.Sprintf("run burn memory by %s mode failed, cannot find the burning program pid",
-			burnMemMode))
+		PrintErrAndExit(fmt.Sprintf("run burn memory failed, cannot find the burning program pid"))
 	}
 }
 
@@ -181,7 +180,7 @@ func calculateMemSize(percent, reserve int) (int64, int64, error) {
 	}
 	total = int64(virtualMemory.Total)
 	available = int64(virtualMemory.Free)
-	if burnMemMode == "ram" && !includeBufferCache {
+	if !includeBufferCache {
 		available = available + int64(virtualMemory.Buffers+virtualMemory.Cached)
 	}
 	reserved := int64(0)
