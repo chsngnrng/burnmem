@@ -66,7 +66,6 @@ func main() {
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
-	flag.StringVar(&burnMemMode, "mode", "cache", "burn memory mode, cache or ram")
 	ParseFlagAndInitLog()
 
 	if burnMemStart {
@@ -76,11 +75,7 @@ func main() {
 			PrintErrAndExit(errs)
 		}
 	} else if burnMemNohup {
-		if burnMemMode == "cache" {
-			burnMemWithCache()
-		} else if burnMemMode == "ram" {
-			burnMemWithRam()
-		}
+	    burnMemWithRam()
 	} else {
 		PrintAndExitWithErrPrefix("less --start or --stop flag")
 	}
@@ -134,31 +129,6 @@ func burnMemWithRam() {
 	}
 }
 
-func burnMemWithCache() {
-	filePath := path.Join(path.Join(util.GetProgramPath(), dirName), fileName)
-	tick := time.Tick(time.Second)
-	for range tick {
-		_, expectMem, err := calculateMemSize(memPercent, memReserve)
-		if err != nil {
-			stopBurnMemFunc()
-			PrintErrAndExit(err.Error())
-		}
-		fillMem := expectMem
-		if expectMem > 0 {
-			if expectMem > int64(memRate) {
-				fillMem = int64(memRate)
-			}
-			nFilePath := fmt.Sprintf("%s%d", filePath, fileCount)
-			response := cl.Run(context.Background(), "dd", fmt.Sprintf("if=/dev/zero of=%s bs=1M count=%d", nFilePath, fillMem))
-			if !response.Success {
-				stopBurnMemFunc()
-				PrintErrAndExit(response.Error())
-			}
-			fileCount++
-		}
-	}
-}
-
 var burnMemBin = "chaos_burnmem"
 
 var cl = channel.NewLocalChannel()
@@ -169,23 +139,6 @@ var runBurnMemFunc = runBurnMem
 
 func startBurnMem() {
 	ctx := context.Background()
-	if burnMemMode == "cache" {
-		if !cl.IsCommandAvailable("mount") {
-			PrintErrAndExit(spec.CommandMountNotFound.Msg)
-		}
-
-		flPath := path.Join(util.GetProgramPath(), dirName)
-		if _, err := os.Stat(flPath); err != nil {
-			err = os.Mkdir(flPath, os.ModePerm)
-			if err != nil {
-				PrintErrAndExit(err.Error())
-			}
-		}
-		response := cl.Run(ctx, "mount", fmt.Sprintf("-t tmpfs tmpfs %s -o size=", flPath)+"100%")
-		if !response.Success {
-			PrintErrAndExit(response.Error())
-		}
-	}
 	runBurnMemFunc(ctx, memPercent, memReserve, memRate, burnMemMode, includeBufferCache)
 }
 
@@ -237,25 +190,6 @@ func stopBurnMem() (success bool, errs string) {
 		response = cl.Run(ctx, "kill", fmt.Sprintf(`-9 %s`, strings.Join(pids, " ")))
 		if !response.Success {
 			return false, response.Err
-		}
-	}
-	if burnMemMode == "cache" {
-		dirPath := path.Join(util.GetProgramPath(), dirName)
-		if _, err := os.Stat(dirPath); err == nil {
-			if !cl.IsCommandAvailable("umount") {
-				PrintErrAndExit(spec.CommandUmountNotFound.Msg)
-			}
-
-			response = cl.Run(ctx, "umount", dirPath)
-			if !response.Success {
-				if !strings.Contains(response.Err, "not mounted") {
-					PrintErrAndExit(response.Error())
-				}
-			}
-			err = os.RemoveAll(dirPath)
-			if err != nil {
-				PrintErrAndExit(err.Error())
-			}
 		}
 	}
 	return true, errs
