@@ -34,17 +34,15 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-const PageCounterMax uint64 = 9223372036854770000
-
 const ErrPrefix = "Error:"
 
 // 128K
 type Block [32 * 1024]int32
 
 var (
-	includeBufferCache                bool
-	memPercent, memReserve, memRate   int
-	ExitMessageForTesting             string
+	includeBufferCache                             bool
+	memPercent, memReserve, memRate, timeSeconds   int
+	ExitMessageForTesting                          string
 )
 
 func main() {
@@ -52,6 +50,7 @@ func main() {
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
+	flag.IntVar(&timeSeconds, "time", 0, "duration of work, seconds")
 	ParseFlagAndInitLog()
 	burnMemWithRam()
 }
@@ -73,6 +72,13 @@ func burnMemWithRam() {
 		memRate = 100
 	}
 	for range tick {
+		if timeSeconds > 0 {
+			if timeSeconds > 1 {
+				timeSeconds -= 1
+			} else {
+				PrintOutputAndExit("Done")
+			}
+		}
 		_, expectMem, err := calculateMemSize(memPercent, memReserve)
 		if err != nil {
 			PrintErrAndExit(err.Error())
@@ -95,8 +101,8 @@ func burnMemWithRam() {
 				cache[count] = make([]Block, 0)
 				buf = cache[count]
 			}
-			logrus.Debugf("count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d",
-				count, len(buf), cap(buf), expectMem, fillSize)
+			logrus.Debugf("count: %d, len(buf): %d, cap(buf): %d, expect mem: %d, fill size: %d, time left: %d",
+				count, len(buf), cap(buf), expectMem, fillSize, timeSeconds)
 			cache[count] = append(buf, make([]Block, fillSize)...)
 		}
 	}
