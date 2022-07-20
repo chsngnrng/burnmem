@@ -40,13 +40,11 @@ const ErrPrefix = "Error:"
 type Block [32 * 1024]int32
 
 var (
-	includeBufferCache                             bool
 	memPercent, memReserve, memRate, timeSeconds   int
 	ExitMessageForTesting                          string
 )
 
 func main() {
-	flag.BoolVar(&includeBufferCache, "include-buffer-cache", false, "ram model mem-percent is exclude buffer/cache")
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
@@ -122,9 +120,6 @@ func calculateMemSize(percent, reserve int) (int64, int64, error) {
 	}
 	total = int64(virtualMemory.Total)
 	available = int64(virtualMemory.Free)
-	if !includeBufferCache {
-		available = available + int64(virtualMemory.Buffers+virtualMemory.Cached)
-	}
 	reserved := int64(0)
 	if percent != 0 {
 		reserved = (total * int64(100-percent) / 100) / 1024 / 1024
