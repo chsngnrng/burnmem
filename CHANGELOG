@@ -1,0 +1,5 @@
+v0.1.1
+Removed oom adj, cache mode, includeBufferCache, start/stop functionality as unnecessary for standalone usage in Windows.
+Added timer
+v0.1.0
+Removed cgroups as it does not exist and cannot be compiled for Windows
