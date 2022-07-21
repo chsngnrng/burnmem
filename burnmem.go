@@ -40,14 +40,14 @@ const ErrPrefix = "Error:"
 type Block [32 * 1024]int32
 
 var (
-	memPercent, memReserve, memRate, timeSeconds   int
-	ExitMessageForTesting                          string
+	memPercent, memReserve, memRate, timeSeconds int
+	ExitMessageForTesting                        string
 )
 
 func main() {
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
-	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S, only support for ram mode")
+	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S")
 	flag.IntVar(&timeSeconds, "time", 0, "duration of work, seconds")
 	ParseFlagAndInitLog()
 	burnMemWithRam()
@@ -109,7 +109,6 @@ func burnMemWithRam() {
 var burnMemBin = "chaos_burnmem"
 
 var cl = channel.NewLocalChannel()
-
 
 func calculateMemSize(percent, reserve int) (int64, int64, error) {
 	total := int64(0)
