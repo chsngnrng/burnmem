@@ -42,6 +42,7 @@ type Block [32 * 1024]int32
 var (
 	memPercent, memReserve, memRate, timeSeconds int
 	ExitMessageForTesting                        string
+	includeSwap                                  bool
 )
 
 func main() {
@@ -49,6 +50,8 @@ func main() {
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S")
 	flag.IntVar(&timeSeconds, "time", 0, "duration of work, seconds")
+	flag.BoolVar(&includeSwap, "swap", true, "include swap in memory model")
+
 	ParseFlagAndInitLog()
 	burnMemWithRam()
 }
@@ -113,22 +116,37 @@ var cl = channel.NewLocalChannel()
 func calculateMemSize(percent, reserve int) (int64, int64, error) {
 	total := int64(0)
 	available := int64(0)
+	reserved := int64(0)
+	expectSize := int64(0)
+	if percent != 0 {
+		reserved = (total * int64(100-percent) / 100) / 1024 / 1024
+	} else {
+		reserved = int64(reserve)
+	}
 	virtualMemory, err := mem.VirtualMemory()
 	if err != nil {
 		return 0, 0, err
 	}
 	total = int64(virtualMemory.Total)
 	available = int64(virtualMemory.Free)
-	reserved := int64(0)
-	if percent != 0 {
-		reserved = (total * int64(100-percent) / 100) / 1024 / 1024
-	} else {
-		reserved = int64(reserve)
-	}
-	expectSize := available/1024/1024 - reserved
 
-	logrus.Debugf("available: %d, percent: %d, reserved: %d, expectSize: %d",
-		available/1024/1024, percent, reserved, expectSize)
+	if includeSwap {
+		swapMemory, err := mem.SwapMemory()
+		if err != nil {
+			return 0, 0, err
+		}
+		total += int64(swapMemory.Total)
+		available += int64(swapMemory.Free)
+
+		expectSize = available/1024/1024 - reserved
+		logrus.Debugf("available: %d, swap free: %d, percent: %d, reserved: %d, expectSize: %d",
+			available/1024/1024, swapMemory.Free/1024/1024, percent, reserved, expectSize)
+
+	} else {
+		expectSize = available/1024/1024 - reserved
+		logrus.Debugf("available: %d, percent: %d, reserved: %d, expectSize: %d",
+			available/1024/1024, percent, reserved, expectSize)
+	}
 
 	return total / 1024 / 1024, expectSize, nil
 }
