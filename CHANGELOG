@@ -1,3 +1,5 @@
+v0.2.0
+added master binary capable of restarting the utility if it fails (e.g. in case of OOM exception)
 v0.1.1
 Removed oom adj, cache mode, includeBufferCache, start/stop functionality as unnecessary for standalone usage in Windows.
 Added timer
