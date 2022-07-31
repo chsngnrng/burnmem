@@ -55,7 +55,7 @@ func main() {
 
 	ParseFlagAndInitLog()
 	runBurnMem()
-	PrintOutputAndExit("burnmem_watchdog finished gracefully, time remaining " + strconv.Itoa(timeSeconds))
+	PrintOutputAndExit("burnmem_watchdog finished gracefully")
 }
 
 func runBurnMem() {
@@ -64,7 +64,7 @@ func runBurnMem() {
 		arg := []string{"--mem-percent", strconv.Itoa(memPercent), "--reserve", strconv.Itoa(memReserve),
 			"--rate", strconv.Itoa(memRate), "--time", strconv.Itoa(timeSeconds), "--swap", strconv.FormatBool(includeSwap)}
 		cmd := exec.Command(burnMemBin, arg...)
-		logrus.Debugf("Starting chaos_burnmem.exe %d", cmd.Args)
+		logrus.Debugf("Starting chaos_burnmem.exe %v", cmd.Args)
 		err := cmd.Run()
 		if err != nil {
 			logrus.Debugf("chaos_burnmem exited with " + err.Error())
