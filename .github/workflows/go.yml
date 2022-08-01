@@ -24,14 +24,14 @@ jobs:
     - name: Test
       run: go test -v ./...
 
-    - name: 'Upload Artifact'
+    - name: 'Upload chaos_burnmem'
       uses: actions/upload-artifact@v3
       with:
         name: chaos_burnmem
         path: burnmem/chaos_burnmem.exe
         retention-days: 1
   
-      - name: 'Upload Artifact'
+    - name: 'Upload watchdog'
       uses: actions/upload-artifact@v3
       with:
         name: burnmem_watchdog
