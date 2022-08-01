@@ -28,5 +28,12 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: chaos_burnmem
-        path: chaos_burnmem.exe
+        path: burnmem/chaos_burnmem.exe
+        retention-days: 1
+  
+      - name: 'Upload Artifact'
+      uses: actions/upload-artifact@v3
+      with:
+        name: burnmem_watchdog
+        path: burnmem_watchdog/burnmem_watchdog.exe
         retention-days: 1
