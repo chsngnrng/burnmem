@@ -25,11 +25,11 @@ jobs:
     - name: Build watchdog
       run: go build -v ./...
 
-    - name: 'Upload chaos_burnmem'
+    - name: 'Upload burnmem'
       uses: actions/upload-artifact@v3
       with:
-        name: chaos_burnmem
-        path: burnmem/chaos_burnmem.exe
+        name: burnmem
+        path: burnmem/burnmem.exe
         retention-days: 1
   
     - name: 'Upload watchdog'
