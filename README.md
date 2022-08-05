@@ -1,11 +1,12 @@
 This project is based on https://github.com/chaosblade-io/chaosblade-exec-os
 
-It's aim is to compile memory consumation tool from Chaostools for Windows.
-At this moment the only change is cgroups exclusion because it cannot be compiled for Windows.
-Further on I hope to make it more neat and convenient to use
+It's aim is to adapt memory consumation tool from Chaostools for Windows.
 
 Usage:
-chaos_burnmem --nohup --mem-percent 0 --reserve 200 --rate 100 --mode ram --include-buffer-cache=false
+chaos_burnmem.exe --mem-percent 0 --reserve 200 --rate 100 --time 600 --swap
 
-Exactly all these options should be used, otherwise the tool will try to restart itself using missing /bin/sh
-I advise to use --reserve option rather than --mem-percent because the latter seem to work not very reliable on Windows and consume more mem than available
+When the memory is almost depleted, the utility can fail, since the kernel 
+would not always let to allocate, and Goland cannot handle OOM exeption. 
+To handle this, there is a watchdog binary burnmem_watchdog.exe, which
+will restart chaos_burnmem if it exits before the timer is 0. You can launch it 
+with the same options.
