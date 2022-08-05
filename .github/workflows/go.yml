@@ -18,11 +18,11 @@ jobs:
       with:
         go-version: 1.18
 
+    - name: Build burnmem
+      run: go build -v
+
     - name: Build watchdog
       run: go build -v ./...
-
-    - name: Build burnmem
-      run: cd burnmem && go build -v
 
     - name: 'Upload chaos_burnmem'
       uses: actions/upload-artifact@v3
