@@ -18,11 +18,11 @@ jobs:
       with:
         go-version: 1.18
 
-    - name: Build
+    - name: Build watchdog
       run: go build -v ./...
 
-    - name: Test
-      run: go test -v ./...
+    - name: Build burnmem
+      run: cd burnmem && go build -v
 
     - name: 'Upload chaos_burnmem'
       uses: actions/upload-artifact@v3
@@ -35,5 +35,5 @@ jobs:
       uses: actions/upload-artifact@v3
       with:
         name: burnmem_watchdog
-        path: burnmem_watchdog/burnmem_watchdog.exe
+        path: burnmem_watchdog.exe
         retention-days: 1
