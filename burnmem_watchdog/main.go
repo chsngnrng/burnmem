@@ -44,7 +44,7 @@ var (
 var ExitFunc = os.Exit
 
 var cwd, _ = os.Getwd()
-var burnMemBin = cwd + "\\" + "chaos_burnmem.exe"
+var burnMemBin = cwd + "\\" + "burnmem.exe"
 
 func main() {
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
