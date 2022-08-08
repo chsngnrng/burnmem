@@ -54,12 +54,13 @@ func main() {
 	flag.BoolVar(&includeSwap, "swap", true, "include swap in memory model")
 
 	ParseFlagAndInitLog()
+	checkIfBinaryExists()
 	runBurnMem()
 	PrintOutputAndExit("burnmem_watchdog finished gracefully")
 }
 
 func runBurnMem() {
-	for (timeSeconds > 0) {
+	for timeSeconds > 0 {
 		startTime := time.Now()
 		arg := []string{"--mem-percent", strconv.Itoa(memPercent), "--reserve", strconv.Itoa(memReserve),
 			"--rate", strconv.Itoa(memRate), "--time", strconv.Itoa(timeSeconds), "--swap", strconv.FormatBool(includeSwap)}
@@ -67,7 +68,9 @@ func runBurnMem() {
 		logrus.Debugf("Starting chaos_burnmem.exe %v", cmd.Args)
 		err := cmd.Run()
 		if err != nil {
-			logrus.Debugf("chaos_burnmem exited with " + err.Error())
+			if os.IsNotExist(err) {
+			}
+			logrus.Debugf("burnmem exited with " + err.Error())
 		}
 		nowTime := time.Now()
 		workTime := int(nowTime.Unix() - startTime.Unix())
@@ -75,6 +78,12 @@ func runBurnMem() {
 	}
 }
 
+func checkIfBinaryExists() {
+	if _, err := os.Stat(burnMemBin); err != nil {
+		logrus.Debugf(err.Error())
+		PrintAndExitWithErrPrefix("Burnmem binary not found, exiting")
+	}
+}
 func PrintAndExitWithErrPrefix(message string) {
 	ExitMessageForTesting = fmt.Sprintf("%s %s", ErrPrefix, message)
 	fmt.Fprint(os.Stderr, fmt.Sprintf("%s %s", ErrPrefix, message))
