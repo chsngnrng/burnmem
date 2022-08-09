@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"strconv"
 	"time"
 
@@ -38,20 +39,19 @@ const ErrPrefix = "Error:"
 var (
 	memPercent, memReserve, memRate, timeSeconds int
 	ExitMessageForTesting                        string
-	includeSwap                                  bool
 )
 
 var ExitFunc = os.Exit
 
-var cwd, _ = os.Getwd()
-var burnMemBin = cwd + "\\" + "burnmem.exe"
+var binary, _ = (os.Executable())
+var binaryPath = filepath.Dir(binary)
+var burnMemBin = binaryPath + "\\" + "burnmem.exe"
 
 func main() {
 	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S")
 	flag.IntVar(&timeSeconds, "time", 0, "duration of work, seconds")
-	flag.BoolVar(&includeSwap, "swap", true, "include swap in memory model")
 
 	ParseFlagAndInitLog()
 	checkIfBinaryExists()
@@ -63,7 +63,7 @@ func runBurnMem() {
 	for timeSeconds > 0 {
 		startTime := time.Now()
 		arg := []string{"--mem-percent", strconv.Itoa(memPercent), "--reserve", strconv.Itoa(memReserve),
-			"--rate", strconv.Itoa(memRate), "--time", strconv.Itoa(timeSeconds), "--swap", strconv.FormatBool(includeSwap)}
+			"--rate", strconv.Itoa(memRate), "--time", strconv.Itoa(timeSeconds)}
 		cmd := exec.Command(burnMemBin, arg...)
 		logrus.Debugf("Starting chaos_burnmem.exe %v", cmd.Args)
 		err := cmd.Run()
