@@ -102,24 +102,20 @@ func burnMem() {
 }
 
 func calculateMemSize(percent, reserve int) (int64, int64, error) {
-	total := int64(0)
-	available := int64(0)
-	reserved := int64(0)
-	expectSize := int64(0)
-
 	virtualMemory, err := mem.VirtualMemory()
 	if err != nil {
 		return 0, 0, err
 	}
-	total = int64(virtualMemory.Total)
-	available = int64(virtualMemory.Available)
+	total := int64(virtualMemory.Total)
+	available := int64(virtualMemory.Available)
 
+	reserved := int64(0)
 	if percent != 0 {
 		reserved = (total * int64(100-percent) / 100) / 1024 / 1024
 	} else {
 		reserved = int64(reserve)
 	}
-	expectSize = available/1024/1024 - reserved
+	expectSize := available/1024/1024 - reserved
 	logrus.Debugf("total: %d, available: %d, percent: %d, reserved: %d, expectSize: %d",
 		total/1024/1024, available/1024/1024, percent, reserved, expectSize)
 
