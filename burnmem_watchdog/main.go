@@ -48,7 +48,7 @@ var binaryPath = filepath.Dir(binary)
 var burnMemBin = binaryPath + "\\" + "burnmem.exe"
 
 func main() {
-	flag.IntVar(&memPercent, "mem-percent", 0, "percent of burn memory")
+	flag.IntVar(&memPercent, "mem-percent", 100, "percent of burn memory")
 	flag.IntVar(&memReserve, "reserve", 0, "reserve to burn memory, unit is M")
 	flag.IntVar(&memRate, "rate", 100, "burn memory rate, unit is M/S")
 	flag.IntVar(&timeSeconds, "time", 0, "duration of work, seconds")
