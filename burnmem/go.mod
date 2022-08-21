@@ -3,7 +3,7 @@ module burnmem
 go 1.17
 
 require (
-	github.com/chaosblade-io/chaosblade-spec-go v1.6.0
+	github.com/chaosblade-io/chaosblade-spec-go v1.5.0
 	github.com/shirou/gopsutil v3.21.6+incompatible
 	github.com/sirupsen/logrus v1.9.0
 )

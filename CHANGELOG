@@ -1,4 +1,4 @@
-v2.1.1
+v0.2.1
 added check if burnmem.exe is found
 changed run of burnmem.exe from the same dir as burnmem_watchdog.exe instead of cwd
 since shirou gopsutil mem lib does not seem to provide correct swap values in Windows (and not intended to), swap calculation removed
